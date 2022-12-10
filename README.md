@@ -1,1 +1,1 @@
-# TheCyberCTF
+# TheCyberCTFs
